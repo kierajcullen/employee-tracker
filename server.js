@@ -102,16 +102,15 @@ function menu(option) {
     case "Add employee":
       addEmployee();
       break;
-    case "addDept":
+    case "Add department":
       addDept();
       break;
-    case "addRole":
+    case "Add role":
       addRole();
       break;
-    case "updateRole":
+    case "Update role":
       updateRole();
       break;
-    case "exit":
   }
 }
 
