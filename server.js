@@ -1,5 +1,4 @@
 // require mysql and inquirer
-// MAKE SURE TO INSTALL YOUR PACKAGES!!! YOU ALWAYS FORGET
 var mysql = require("mysql");
 const inquirer = require("inquirer");
 // do i need this confirm statement?
@@ -35,25 +34,10 @@ connection.connect(function (err) {
     return;
   }
   console.log("connected as id " + connection.threadId);
-
-  // make sure the grab the correct values.. is this from the inspect tool?
-  // connection.query("SELECT * from role", function (err, res) {
-  //   showroles = res.map((role) => ({ name: role.title, value: role.id }));
-  // });
-  // connection.query("SELECT * from department", function (err, res) {
-  //   showdepartments = res.map((dep) => ({ name: dep.name, value: dep.id }));
-  // });
-  // connection.query("SELECT * from employee", function (err, res) {
-  //   // console.log(err, res);
-  //   showemployees = res.map((emp) => ({
-  //     name: `${emp.first_name} ${emp.last_name}`,
-  //     value: emp.id,
-  //   }));
-  // });
   displayMenu();
 });
 
-app.listen(PORT, () => console.log("listening on port: " + PORT));
+app.listen(PORT, () => console.log("Listening on port: " + PORT));
 
 // Show inquirer menu
 function displayMenu() {
@@ -64,19 +48,12 @@ function displayMenu() {
       name: "choices",
       choices: [
         "View employee list",
-
         "View departments",
-
         "View all roles",
-
         "Add employee",
-
         "Add department",
-
         "Add role",
-
         "Update role",
-
         "Exit",
       ],
     })
@@ -121,19 +98,229 @@ function viewAllEmployees() {
       console.table(res);
     }
   );
+  displayMenu();
 }
 
 function viewAllDepartments() {
-  // console.log("View Departments");
   connection.query("SELECT * from department", function (err, res) {
     console.table(res);
   });
+  displayMenu();
 }
 
 function viewAllRoles() {
   connection.query("SELECT * from role", function (err, res) {
     console.table(res);
   });
+  displayMenu();
 }
 
 // updating and adding, examples in MySQL activity 10
+
+// look up api to get a.. random user generator
+
+//Add departments
+function addDept() {
+  inquirer
+    .prompt([
+      {
+        name: "name",
+        type: "input",
+        message: "What department would you like to add?",
+      },
+    ])
+    .then((response) => {
+      let query = connection.query(
+        "INSERT INTO department SET ?",
+        {
+          name: response.name,
+        },
+        function (err) {
+          if (err) throw err;
+          console.table(response);
+          displayMenu();
+        }
+      );
+    });
+}
+
+//Add roles and prompt user choices
+function addRole() {
+  connection.query("SELECT * from department", function (err, res) {
+    inquirer
+      .prompt([
+        {
+          name: "Title",
+          type: "input",
+          message: "Please input the role: ",
+        },
+        {
+          name: "Salary",
+          type: "input",
+          message: "Please input the salary: ",
+        },
+        {
+          name: "department",
+          type: "list",
+          message: "Please input the department: ",
+          choices: function () {
+            var department = [];
+            for (var i = 0; i < res.length; i++) {
+              department.push({
+                name: res[i].name,
+                value: res[i].id,
+              });
+            }
+            return department;
+          },
+        },
+      ])
+      .then(function (response) {
+        //connecting query to add title, salary
+        connection.query(
+          "INSERT INTO role SET ?",
+          {
+            title: response.Title,
+            salary: response.Salary,
+            department_id: response.department,
+          },
+
+          function (err) {
+            if (err) throw err;
+            console.table(response);
+            displayMenu();
+          }
+        );
+      });
+  });
+}
+
+// select role function queries role title for adding employee questions
+
+function createEmployee(first_name, last_name, role_id) {
+  connection.query(
+    "INSERT employee SET ?",
+    [
+      {
+        first_name,
+        last_name,
+        role_id,
+      },
+    ],
+    (err, results) => {
+      if (err) console.log(err);
+      displayMenu();
+    }
+  );
+}
+
+function addEmployee() {
+  connection.query(
+    "SELECT employee.id, employee.first_name, employee.last_name, role.title, employee.role_id FROM employee JOIN role ON employee.role_id = role.id;",
+    function (err, res) {
+      if (err) throw err;
+      console.log(res);
+      inquirer
+        .prompt([
+          {
+            name: "firstname",
+            type: "input",
+            message: "Please enter the employees first name",
+          },
+
+          {
+            name: "lastname",
+            type: "input",
+            message: "Please enter the employees last name",
+          },
+
+          {
+            name: "role",
+            type: "list",
+            message: "What is their role?",
+            choices: function () {
+              var roles = [];
+              for (var i = 0; i < res.length; i++) {
+                roles.push({
+                  name: res[i].title,
+                  value: res[i].role_id,
+                });
+              }
+              console.log(roles);
+              return roles;
+            },
+          },
+        ])
+        .then(function (value) {
+          console.log(value);
+          createEmployee(value.firstname, value.lastname, value.role);
+          displayMenu();
+        });
+    }
+  );
+}
+function updateRole() {
+  connection.query(
+    "SELECT employee.id, employee.first_name, employee.last_name, role.title, employee.role_id FROM employee JOIN role ON employee.role_id = role.id;",
+    function (err, res) {
+      if (err) throw err;
+      console.log(res);
+      inquirer
+        .prompt([
+          {
+            name: "employee",
+            type: "rawlist",
+            choices: function () {
+              var lastName = [];
+              for (var i = 0; i < res.length; i++) {
+                lastName.push({
+                  name: res[i].first_name + " " + res[i].last_name,
+                  value: res[i].id,
+                });
+              }
+              console.log(lastName);
+              return lastName;
+            },
+            message: "Please select an employee",
+          },
+          {
+            name: "role",
+            type: "rawlist",
+            message: "What is the employee's new title?",
+            choices: function () {
+              var roles = [];
+              for (var i = 0; i < res.length; i++) {
+                roles.push({
+                  name: res[i].title,
+                  value: res[i].role_id,
+                });
+              }
+              return roles;
+            },
+          },
+        ])
+        .then((value) => {
+          console.log(value);
+          updateEmployeeDB(value.role.value, value.employee.value);
+        });
+    }
+  );
+}
+
+function updateEmployeeDB(role_id, id) {
+  connection.query(
+    "UPDATE employee SET ? WHERE ? ",
+    [
+      {
+        role_id,
+      },
+      {
+        id,
+      },
+    ],
+    (err, results) => {
+      if (err) console.log(err);
+      displayMenu();
+    }
+  );
+}
